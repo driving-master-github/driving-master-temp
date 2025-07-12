@@ -90,6 +90,8 @@ export default function Home() {
     setLoading(true);
 
     try {
+      console.log("Submitting form data:", formData);
+      // Submit form data to existing backend
       const response = await fetch(
         "https://next-js-running-backend.vercel.app/api/driving-master",
         {
@@ -104,9 +106,111 @@ export default function Home() {
 
       if (response.ok) {
         const result = await response.json();
+        console.log("Backend submission successful:", result);
         toast.success(
           "Enquiry submitted successfully! We will contact you soon."
         );
+
+        // Prepare email content for user confirmation
+        const userEmailBody = `
+          Thank you for your enquiry with DrivingMaster!
+          Enquiry Details:
+          Name: ${formData.student_name}
+          Phone: ${formData.phone_number}
+          Email: ${formData.email}
+          Car Type: ${formData.car_type}
+          Location: ${formData.location}
+          Start Date: ${formData.start_date}
+          We will contact you soon.
+        `;
+
+        // Prepare email content for lead notification to connect@drivingmaster.in
+        const leadEmailBody = `
+          New Lead Received:
+          Name: ${formData.student_name}
+          Phone: ${formData.phone_number}
+          Email: ${formData.email}
+          Car Type: ${formData.car_type}
+          Location: ${formData.location}
+          Start Date: ${formData.start_date}
+        `;
+
+        // Send confirmation email to user
+        try {
+          console.log("Sending confirmation email to:", formData.email);
+          const userEmailResponse = await fetch("/api/send-email", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              toEmail: formData.email,
+              subject: "DrivingMaster Enquiry Confirmation",
+              body: userEmailBody,
+            }),
+          });
+
+          if (!userEmailResponse.ok) {
+            const errorData = await userEmailResponse.json();
+            console.error("Failed to send confirmation email:", {
+              email: formData.email,
+              status: userEmailResponse.status,
+              error: errorData.error,
+              details: errorData.details || "No additional details",
+            });
+          } else {
+            console.log(
+              "Confirmation email sent successfully to:",
+              formData.email
+            );
+          }
+        } catch (error: any) {
+          console.error("Error sending confirmation email:", {
+            email: formData.email,
+            message: error.message,
+            stack: error.stack,
+          });
+        }
+
+        // Send lead notification email to connect@drivingmaster.in
+        try {
+          console.log(
+            "Sending lead notification email to: connect@drivingmaster.in"
+          );
+          const leadEmailResponse = await fetch("/api/send-email", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              toEmail: "connect@drivingmaster.in",
+              subject: "New DrivingMaster Lead",
+              body: leadEmailBody,
+            }),
+          });
+
+          if (!leadEmailResponse.ok) {
+            const errorData = await leadEmailResponse.json();
+            console.error("Failed to send lead notification email:", {
+              email: "connect@drivingmaster.in",
+              status: leadEmailResponse.status,
+              error: errorData.error,
+              details: errorData.details || "No additional details",
+            });
+          } else {
+            console.log(
+              "Lead notification email sent successfully to: connect@drivingmaster.in"
+            );
+          }
+        } catch (error: any) {
+          console.error("Error sending lead notification email:", {
+            email: "connect@drivingmaster.in",
+            message: error.message,
+            stack: error.stack,
+          });
+        }
+
+        // Reset form
         setFormData({
           student_name: "",
           phone_number: "",
@@ -116,11 +220,19 @@ export default function Home() {
           start_date: "",
         });
       } else {
+        const errorData = await response.json();
+        console.error("Backend submission failed:", {
+          status: response.status,
+          error: errorData.error || "No error message provided",
+        });
         throw new Error("Failed to submit enquiry");
       }
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      toast.error("Failed to submit enquiry. Please try again.");
+    } catch (error: any) {
+      console.error("Form submission error:", {
+        message: error.message,
+        stack: error.stack,
+      });
+      toast.error("Failed to submit enquiry or send email. Please try again.");
     } finally {
       setLoading(false);
     }
