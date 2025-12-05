@@ -53,7 +53,7 @@ async function sendEmail(toEmail: string, subject: string, body: string) {
       message: {
         subject,
         body: {
-          contentType: "Text",
+          contentType: "HTML",
           content: body,
         },
         toRecipients: [
